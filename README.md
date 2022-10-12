@@ -22,4 +22,7 @@ git rebase-all <branch-name>
 
 ### Installation
 
-TBD
+```
+go get github.com/ahodieb/rebaser/cmd/rebaser
+git config --global alias.rebase-all '!rebaser'
+```
