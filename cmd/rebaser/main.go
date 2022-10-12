@@ -32,9 +32,34 @@ func main() {
 
 func RebaseAllBranches(cCtx *cli.Context) error {
 	g := git.Git{WorkingDir: cCtx.String(FlagWorkingDir)}
-	stdout, stderr, err := g.Exec("status")
 
-	log.Println(stdout)
-	log.Println(stderr)
+	mainBranch, err := g.FindMainBranch()
+	if err != nil {
+		return err
+	}
+
+	branches, err := g.ListBranches()
+	if err != nil {
+		return err
+	}
+
+	branches = remove(mainBranch, branches)
+
+	for _, branch := range branches {
+		if err := g.Rebase(mainBranch, branch); err != nil {
+			log.Printf("failed to rebase branch %q", branch)
+		}
+	}
+
 	return err
+}
+
+func remove(value string, values []string) []string {
+	for i := range values {
+		if values[i] == value {
+			return append(values[:i], values[i+1:]...)
+		}
+	}
+
+	return values
 }
