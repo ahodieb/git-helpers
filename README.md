@@ -1,10 +1,20 @@
-# Rebaser 
+# git-helpers 
 
-![](https://img.shields.io/badge/version-v0.0.1%20(beta)-green?style=for-the-badge)
+![](https://img.shields.io/badge/version-v0.0.2%20(beta)-green?style=for-the-badge)
 ![](https://img.shields.io/badge/WARNING-can%20damage%20your%20git%20history-red?style=for-the-badge)
 
 Provides a collection of helper functionality that I used every day
 
+## Installation
+
+```bash
+# install cli
+go get github.com/ahodieb/rebaser
+
+# setup git aliases for a quicker flow
+git config --global alias.main '!rebaser checkout-main'
+git config --global alias.rebase-all '!rebaser rebase-all'
+```
 
 ## Helpers 
 
@@ -30,13 +40,3 @@ git-helpers rebase-all
 git rebase-all
 ```
 
-### Installation
-
-```bash
-# install cli
-go get github.com/ahodieb/rebaser
-
-# setup git aliases for a quicker flow
-git config --global alias.main '!rebaser checkout-main'
-git config --global alias.rebase-all '!rebaser rebase-all'
-```
