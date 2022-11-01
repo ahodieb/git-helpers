@@ -3,29 +3,40 @@
 ![](https://img.shields.io/badge/version-v0.0.1%20(beta)-green?style=for-the-badge)
 ![](https://img.shields.io/badge/WARNING-can%20damage%20your%20git%20history-red?style=for-the-badge)
 
-is a git utility cli that rebases all branches onto a a specified branch. 
-
-It addresses a common use case i have during my daily work, when i have multiple feature branches locally i like to rebase all of them onto main frequently, previously i had some bash scripts for it 
+Provides a collection of helper functionality that I used every day
 
 
-### Usage
+## Helpers 
 
-```bash
-# rebases all branches onto `main or master` default main branch
-
-git rebase-all 
-```
+### `checkout-main`
+Checkout the main branch. 
+Many projects have migrated from `master` to `main` as the main branch name, so this switch to whatever is the main branch in the current repository
 
 ```bash
-# rebases all branches onto `<branch-name>` 
+git-helpers checkout-main
 
-git rebase-all <branch-name>
+# with git aliases setup
+git main
 ```
 
+### `rebase-all`
+Rebase all the other branches on top of the `main` branch. 
+When I work on multiple feature branches locally I like to rebase all of them onto main frequently.
+
+```bash
+git-helpers rebase-all
+
+# with git aliases setup
+git rebase-all
+```
 
 ### Installation
 
-```
+```bash
+# install cli
 go get github.com/ahodieb/rebaser
+
+# setup git aliases for a quicker flow
+git config --global alias.main '!rebaser checkout-main'
 git config --global alias.rebase-all '!rebaser rebase-all'
 ```
