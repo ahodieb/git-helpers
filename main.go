@@ -22,6 +22,11 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
+				Name:   "checkout-main",
+				Usage:  "checkout `main` branch, it checks out the main branch by looking for `main` or `master`",
+				Action: cmd.CheckoutMain,
+			},
+			{
 				Name:   "rebase-all",
 				Usage:  "rebase multiple branches onto `BRANCH`",
 				Action: cmd.RebaseAll,
