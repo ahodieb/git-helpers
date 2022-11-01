@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ahodieb/rebaser/cmd"
+	"github.com/ahodieb/git-helpers/cmd"
 	"github.com/urfave/cli/v2"
 )
 

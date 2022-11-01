@@ -3,7 +3,7 @@ package cmd
 import (
 	"log"
 
-	"github.com/ahodieb/rebaser/git"
+	"github.com/ahodieb/git-helpers/git"
 	"github.com/urfave/cli/v2"
 )
 
