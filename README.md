@@ -26,6 +26,6 @@ git rebase-all <branch-name>
 ### Installation
 
 ```
-go get github.com/ahodieb/rebaser/cmd/rebaser
-git config --global alias.rebase-all '!rebaser'
+go get github.com/ahodieb/rebaser
+git config --global alias.rebase-all '!rebaser rebase-all'
 ```
