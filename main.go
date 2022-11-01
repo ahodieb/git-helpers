@@ -10,7 +10,7 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name:  "git-helpers",
+		Name:  cmd.AppName,
 		Usage: "provides some additional functionality to git",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -30,6 +30,11 @@ func main() {
 				Name:   "rebase-all",
 				Usage:  "rebase multiple branches onto `BRANCH`",
 				Action: cmd.RebaseAll,
+			},
+			{
+				Name:   "install-git-aliases",
+				Usage:  "sets up git aliases for all helper subcommands",
+				Action: cmd.InstallAliases,
 			},
 		},
 	}

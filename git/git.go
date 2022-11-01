@@ -97,9 +97,25 @@ func (git *Git) ListBranches() ([]string, error) {
 	if stderr != "" {
 		return nil, fmt.Errorf(stderr)
 	}
-
 	stdout = strings.TrimSpace(stdout)
 	return strings.Split(stdout, "\n"), nil
+}
+
+// AddAlias adds a global alias to git config
+// `git config --global alias.<alias> 'command'
+func (git *Git) AddAlias(alias, command string) error {
+	alias = fmt.Sprintf("alias.%s", alias)
+
+	_, stderr, err := git.Exec("config", "--global", alias, command)
+	if err != nil {
+		return err
+	}
+
+	if stderr != "" {
+		return fmt.Errorf(stderr)
+	}
+
+	return nil
 }
 
 // Exec runs a git command with the passed args
