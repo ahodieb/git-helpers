@@ -9,11 +9,11 @@ Provides a collection of helper functionality that I used every day
 
 ```bash
 # install cli
-go get github.com/ahodieb/rebaser
+go get github.com/ahodieb/git-helpers
 
 # setup git aliases for a quicker flow
-git config --global alias.main '!rebaser checkout-main'
-git config --global alias.rebase-all '!rebaser rebase-all'
+git config --global alias.main '!git-helpers checkout-main'
+git config --global alias.rebase-all '!git-helpers rebase-all'
 ```
 
 ## Helpers 

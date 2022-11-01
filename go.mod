@@ -1,4 +1,4 @@
-module github.com/ahodieb/rebaser
+module github.com/ahodieb/git-helpers
 
 go 1.19
 
