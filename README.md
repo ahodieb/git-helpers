@@ -12,8 +12,7 @@ Provides a collection of helper functionality that I used every day
 go get github.com/ahodieb/git-helpers
 
 # setup git aliases for a quicker flow
-git config --global alias.main '!git-helpers checkout-main'
-git config --global alias.rebase-all '!git-helpers rebase-all'
+git-helpers install-git-aliases
 ```
 
 ## Helpers 
