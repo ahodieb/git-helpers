@@ -114,12 +114,18 @@ func (git *Git) Exec(arg ...string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	stderrStr := strings.TrimSpace(stderr.String())
+
 	if err := cmd.Run(); err != nil {
+		if stderrStr != "" {
+			return "", fmt.Errorf("%s, %w", stderrStr, err)
+		}
+
 		return "", err
 	}
 
-	if err := strings.TrimSpace(stderr.String()); err != "" {
-		return "", fmt.Errorf(err)
+	if stderrStr != "" {
+		return "", fmt.Errorf(stderrStr)
 	}
 
 	return strings.TrimSpace(stdout.String()), nil
