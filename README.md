@@ -1,7 +1,7 @@
-# git-helpers 
+# git-helpers
 
-![](https://img.shields.io/badge/version-v0.0.2%20(beta)-green?style=for-the-badge)
-![](https://img.shields.io/badge/WARNING-can%20damage%20your%20git%20history-red?style=for-the-badge)
+![](https://img.shields.io/badge/version-v0.0.3%20(beta)-green?style=for-the-badge)
+![](https://img.shields.io/badge/WARNING-can%20damage%20your%20repository%20structure-red?style=for-the-badge)
 
 Provides a collection of helper functionality that I used every day
 
@@ -9,17 +9,19 @@ Provides a collection of helper functionality that I used every day
 
 ```bash
 # install cli
-go get github.com/ahodieb/git-helpers
+go install github.com/ahodieb/git-helpers
 
 # setup git aliases for a quicker flow
 git-helpers install-git-aliases
 ```
 
-## Helpers 
+## Helpers
 
 ### `checkout-main`
-Checkout the main branch. 
-Many projects have migrated from `master` to `main` as the main branch name, so this switch to whatever is the main branch in the current repository
+
+Checkout the main branch.
+Many projects have migrated from `master` to `main` as the main branch name, so this switch to whatever is the main
+branch in the current repository
 
 ```bash
 git-helpers checkout-main
@@ -29,7 +31,8 @@ git main
 ```
 
 ### `rebase-all`
-Rebase all the other branches on top of the `main` branch. 
+
+Rebase all the other branches on top of the `main` branch.
 When I work on multiple feature branches locally I like to rebase all of them onto main frequently.
 
 ```bash
