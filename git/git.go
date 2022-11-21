@@ -81,7 +81,13 @@ func (git *Git) Cherry() ([]string, error) {
 		return nil, err
 	}
 
-	return strings.Split(stdout, "\n"), nil
+	var changes []string
+	for _, change := range strings.Split(stdout, "\n") {
+		if strings.TrimSpace(change) != "" {
+			changes = append(changes, change)
+		}
+	}
+	return changes, nil
 }
 
 // Checkout checks out a <branch>

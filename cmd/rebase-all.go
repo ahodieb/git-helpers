@@ -21,7 +21,7 @@ func RebaseAll(cCtx *cli.Context) error {
 	}
 
 	if len(changes) != 0 {
-		log.Printf("%s branch has unpublished commits, abborting", mainBranch)
+		log.Printf("%s branch has unpublished commits, abborting, %v", mainBranch, changes)
 		return nil
 	}
 
