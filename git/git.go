@@ -24,18 +24,12 @@ func (git *Git) Rebase(base, target string) error {
 
 	defer git.Checkout(currentBranch)
 
-	_, stderr, err := git.Exec("rebase", base, target)
+	err = git.ExecSilent("rebase", base, target)
 	if err != nil {
 		git.Exec("rebase", "--abort")
-
-		if stderr != "" {
-			return fmt.Errorf("%s, %w", stderr, err)
-		}
-
-		return err
 	}
 
-	return nil
+	return err
 }
 
 // FindMainBranch returns the name of the main branch
@@ -60,66 +54,57 @@ func (git *Git) FindMainBranch() (string, error) {
 // CurrentBranch returns the name of the current checked out branch
 // `git branch --show-current`
 func (git *Git) CurrentBranch() (string, error) {
-	stdout, stderr, err := git.Exec("branch", "--show-current")
+	stdout, err := git.Exec("branch", "--show-current")
 	if err != nil {
 		return "", err
 	}
 
-	if stderr != "" {
-		return "", fmt.Errorf(stderr)
+	return stdout, nil
+}
+
+// ListBranches returns the names of local branches
+// `git branch --format=%(refname:short)
+func (git *Git) ListBranches() ([]string, error) {
+	stdout, err := git.Exec("branch", `--format=%(refname:short)`)
+	if err != nil {
+		return nil, err
 	}
 
-	return strings.TrimSpace(stdout), nil
+	return strings.Split(stdout, "\n"), nil
+}
+
+// Cherry returns the diff from branch and upstream
+// `git cherry -v`
+func (git *Git) Cherry() ([]string, error) {
+	stdout, err := git.Exec("cherry", "-v")
+	if err != nil {
+		return nil, err
+	}
+
+	return strings.Split(stdout, "\n"), nil
 }
 
 // Checkout checks out a <branch>
 // `git checkout <branch>`
 func (git *Git) Checkout(branch string) error {
-	_, stderr, err := git.Exec("checkout", branch)
-	if err != nil {
-		return err
-	}
-
-	if stderr != "" {
-		return fmt.Errorf(stderr)
-	}
-
-	return nil
-}
-
-// ListBranches returns the names of local branches
-func (git *Git) ListBranches() ([]string, error) {
-	stdout, stderr, err := git.Exec("branch", `--format=%(refname:short)`)
-	if err != nil {
-		return nil, err
-	}
-
-	if stderr != "" {
-		return nil, fmt.Errorf(stderr)
-	}
-	stdout = strings.TrimSpace(stdout)
-	return strings.Split(stdout, "\n"), nil
+	return git.ExecSilent("checkout", branch)
 }
 
 // AddAlias adds a global alias to git config
 // `git config --global alias.<alias> 'command'
 func (git *Git) AddAlias(alias, command string) error {
 	alias = fmt.Sprintf("alias.%s", alias)
+	return git.ExecSilent("config", "--global", alias, command)
+}
 
-	_, stderr, err := git.Exec("config", "--global", alias, command)
-	if err != nil {
-		return err
-	}
-
-	if stderr != "" {
-		return fmt.Errorf(stderr)
-	}
-
-	return nil
+// ExecSilent runs a git command with the passed args and ignores the output
+func (git *Git) ExecSilent(arg ...string) error {
+	_, err := git.Exec(arg...)
+	return err
 }
 
 // Exec runs a git command with the passed args
-func (git *Git) Exec(arg ...string) (string, string, error) {
+func (git *Git) Exec(arg ...string) (string, error) {
 	var stdout strings.Builder
 	var stderr strings.Builder
 
@@ -129,6 +114,13 @@ func (git *Git) Exec(arg ...string) (string, string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
-	return strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	if err := strings.TrimSpace(stderr.String()); err != "" {
+		return "", fmt.Errorf(err)
+	}
+
+	return strings.TrimSpace(stdout.String()), nil
 }
