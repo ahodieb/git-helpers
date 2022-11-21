@@ -15,6 +15,15 @@ func RebaseAll(cCtx *cli.Context) error {
 		return err
 	}
 
+	changes, err := g.Cherry()
+	if err != nil {
+		return err
+	}
+
+	if len(changes) != 0 {
+		log.Printf("%s branch has unpublished commits, abborting", mainBranch)
+	}
+
 	branches, err := g.ListBranches()
 	if err != nil {
 		return err
