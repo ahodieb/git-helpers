@@ -111,27 +111,28 @@ func (git *Git) ExecSilent(arg ...string) error {
 
 // Exec runs a git command with the passed args
 func (git *Git) Exec(arg ...string) (string, error) {
-	var stdout strings.Builder
-	var stderr strings.Builder
-
+	cmd := exec.Command("git", arg...)
 	arg = append([]string{"-C", git.WorkingDir}, arg...)
 
-	cmd := exec.Command("git", arg...)
+	var stdout strings.Builder
+	var stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	stderrStr := strings.TrimSpace(stderr.String())
-
 	if err := cmd.Run(); err != nil {
-		if stderrStr != "" {
-			return "", fmt.Errorf("%s, %w", stderrStr, err)
+		if stderr.String() != "" {
+			return "", fmt.Errorf("%s, %w", stderr.String(), err)
+		}
+
+		if stdout.String() != "" {
+			return "", fmt.Errorf("%s, %w", stdout.String(), err)
 		}
 
 		return "", err
 	}
 
-	if stderrStr != "" {
-		return "", fmt.Errorf(stderrStr)
+	if stderr.String() != "" {
+		return "", fmt.Errorf(stderr.String())
 	}
 
 	return strings.TrimSpace(stdout.String()), nil
