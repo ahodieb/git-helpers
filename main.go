@@ -36,6 +36,11 @@ func main() {
 				Usage:  "sets up git aliases for all helper subcommands",
 				Action: cmd.InstallAliases,
 			},
+			{
+				Name:   "version",
+				Usage:  "shows the version of the cli",
+				Action: cmd.Version,
+			},
 		},
 	}
 
