@@ -1,6 +1,6 @@
 # git-helpers
 
-![](https://img.shields.io/badge/dynamic/json?label=version&style=for-the-badge&color=green&url=https%3A%2F%2Fraw.githubusercontent.com%2Fahodieb%2Fgit-helpers%2Fmain%2Fcmd%2Fversion.json&query=message)
+![](https://img.shields.io/badge/dynamic/json?label=version&style=for-the-badge&color=green&url=https%3A%2F%2Fraw.githubusercontent.com%2Fahodieb%2Fgit-helpers%2Fmain%2Fcmd%2Fversion.json&query=version)
 ![](https://img.shields.io/badge/WARNING-can%20damage%20your%20repository%20structure-red?style=for-the-badge)
 
 
