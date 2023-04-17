@@ -1,0 +1,7 @@
+exec git init -b main repo
+exec git -C repo branch --show-current
+cp stdout expected.stdout
+
+cd repo
+exec git.CurrentBranch
+cmp stdout ../expected.stdout

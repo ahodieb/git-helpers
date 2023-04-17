@@ -1,0 +1,17 @@
+exec git init -b main repo
+cd repo
+exec git config user.email 'testing@go.local'
+exec git config user.name 'git-helper tests'
+exec git commit --allow-empty -m 'initial commit'
+exec git branch branch-1
+exec git branch branch-2
+exec git branch branch-3
+
+exec git.ListBranches
+cmp stdout ../expected.txt
+
+-- expected.txt --
+branch-1
+branch-2
+branch-3
+main

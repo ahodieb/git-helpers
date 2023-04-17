@@ -1,0 +1,9 @@
+exec git init -b main repo
+
+exec git -C repo status
+cp stderr expected.stderr
+cp stdout expected.stdout
+
+exec git.Exec -C ./repo status
+cmp stdout expected.stdout
+cmp stderr expected.stderr
