@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -54,23 +55,27 @@ func (git *Git) FindMainBranch() (string, error) {
 // CurrentBranch returns the name of the current checked out branch
 // `git branch --show-current`
 func (git *Git) CurrentBranch() (string, error) {
-	stdout, err := git.Exec("branch", "--show-current")
+	out, err := git.Exec2("branch", "--show-current")
 	if err != nil {
 		return "", err
 	}
 
-	return stdout, nil
+	return out.TrimmedStdout(), nil
 }
 
 // ListBranches returns the names of local branches
-// `git branch --format=%(refname:short)
+// `git branch --format=%(refname:short)`
 func (git *Git) ListBranches() ([]string, error) {
-	stdout, err := git.Exec("branch", `--format=%(refname:short)`)
+	out, err := git.Exec2("branch", `--format=%(refname:short)`)
 	if err != nil {
 		return nil, err
 	}
 
-	return strings.Split(stdout, "\n"), nil
+	return out.StdoutLines(), nil
+}
+
+func (o *Output) StdoutLines() []string {
+	return strings.Split(o.TrimmedStdout(), "\n")
 }
 
 // Cherry returns the diff from branch and upstream
@@ -109,6 +114,11 @@ func (git *Git) ExecSilent(arg ...string) error {
 	return err
 }
 
+func (git *Git) Exec2(arg ...string) (Output, error) {
+	arg = append([]string{"-C", git.WorkingDir}, arg...)
+	return Exec(arg...)
+}
+
 // Exec runs a git command with the passed args
 func (git *Git) Exec(arg ...string) (string, error) {
 	cmd := exec.Command("git", arg...)
@@ -136,4 +146,42 @@ func (git *Git) Exec(arg ...string) (string, error) {
 	}
 
 	return strings.TrimSpace(stdout.String()), nil
+}
+
+type Output struct {
+	Stdout   string
+	Stderr   string
+	ExitCode int
+}
+
+func (o *Output) TrimmedStdout() string {
+	return strings.TrimSpace(o.Stdout)
+}
+
+// Exec executes a git command within a working directory wd
+// It returns both stdout, and stderr along with an error type
+// Note that git sometimes uses stderr even though process exits with 0
+func Exec(arg ...string) (Output, error) {
+	var stdout strings.Builder
+	var stderr strings.Builder
+
+	cmd := exec.Command("git", arg...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	out := Output{
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
+	}
+
+	if err != nil {
+		var exErr *exec.ExitError
+		if errors.As(err, &exErr) {
+			out.ExitCode = exErr.ExitCode()
+		} else {
+			out.ExitCode = 1
+		}
+	}
+	return out, err
 }
