@@ -1,0 +1,7 @@
+# checkout-main errors when neither main nor master exists.
+cd repo
+exec git checkout -b feature
+exec git branch -D main
+
+! exec git-helpers -C . checkout-main
+stderr 'did not find'

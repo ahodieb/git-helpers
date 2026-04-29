@@ -1,0 +1,5 @@
+# smoke test: harness wired up, --help exits 0 and lists subcommands.
+exec git-helpers --help
+stdout 'rebase-all'
+stdout 'checkout-main'
+stdout 'install-git-aliases'

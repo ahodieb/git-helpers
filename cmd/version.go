@@ -29,6 +29,11 @@ func Version(cCtx *cli.Context) error {
 		}
 	}
 
-	fmt.Printf("%s %s %s\n", versionMap["version"], commit[:10], timestamp.Format(time.DateTime))
+	shortCommit := commit
+	if len(shortCommit) > 10 {
+		shortCommit = shortCommit[:10]
+	}
+
+	fmt.Printf("%s %s %s\n", versionMap["version"], shortCommit, timestamp.Format(time.DateTime))
 	return nil
 }

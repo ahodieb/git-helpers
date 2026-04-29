@@ -1,0 +1,8 @@
+# When git fails, the Exec wrapper must propagate a non-zero exit code
+# and still capture stderr.
+
+exec git init -b main repo
+
+# rev-parse HEAD on a repo with no commits fails (exit 128).
+! exec git.Exec -C ./repo rev-parse --verify HEAD
+stderr 'fatal'

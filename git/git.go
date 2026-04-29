@@ -119,33 +119,23 @@ func (git *Git) Exec2(arg ...string) (Output, error) {
 	return Exec(arg...)
 }
 
-// Exec runs a git command with the passed args
+// Exec runs a git command with the passed args and returns trimmed stdout.
+// Errors are signalled by exit code only — git writes status messages to
+// stderr on success ("Switched to branch...", progress), so stderr alone
+// is not treated as failure.
 func (git *Git) Exec(arg ...string) (string, error) {
-	cmd := exec.Command("git", arg...)
-	arg = append([]string{"-C", git.WorkingDir}, arg...)
-
-	var stdout strings.Builder
-	var stderr strings.Builder
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if stderr.String() != "" {
-			return "", fmt.Errorf("%s, %w", stderr.String(), err)
+	out, err := git.Exec2(arg...)
+	if err != nil {
+		if out.Stderr != "" {
+			return "", fmt.Errorf("%s, %w", out.Stderr, err)
 		}
-
-		if stdout.String() != "" {
-			return "", fmt.Errorf("%s, %w", stdout.String(), err)
+		if out.Stdout != "" {
+			return "", fmt.Errorf("%s, %w", out.Stdout, err)
 		}
-
 		return "", err
 	}
 
-	if stderr.String() != "" {
-		return "", fmt.Errorf(stderr.String())
-	}
-
-	return strings.TrimSpace(stdout.String()), nil
+	return out.TrimmedStdout(), nil
 }
 
 type Output struct {
