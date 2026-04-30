@@ -34,27 +34,35 @@
 - [x] `git/git_scripts_test.go`: print only on success; delete commented-out `Cmds:` block
 
 ## Phase 4 — Rewrite `rebase-all` on `git replay`
-- [ ] Probe `git --version` ≥ 2.44 at startup; fail with clear message otherwise
-- [ ] New flow per branch: `git replay --onto <main> <merge-base>..<branch>` piped to `git update-ref --stdin` — never checks out anything
-- [ ] Remove the manual checkout / defer-restore dance in `Git.Rebase`
-- [ ] Branches checked out in another worktree just work (refs only)
-- [ ] Branches that conflict are reported as skipped; others continue
-- [ ] New scenarios:
-  - [ ] branch attached to a worktree (currently broken — this is what fixes it)
-  - [ ] one branch conflicts on replay; others still rebase
-  - [ ] starting from a feature branch (no longer needs `main` to be checked out)
+- [x] New flow per branch: `git replay --onto <main> <main>..<branch>` piped to `git update-ref --stdin` — never checks out anything
+- [x] Remove the manual checkout / defer-restore dance (deleted `Git.Rebase`)
+- [x] Branches checked out in another worktree just work (refs only)
+- [x] Branches that conflict are reported as skipped; others continue
+- [x] Cherry safety check dropped (no longer applies — Phase 6 will replace with auto-fetch)
+- [x] Deleted `Git.Cherry` (only caller was the dropped check)
+- [x] Scenarios:
+  - [x] branch attached to a worktree
+  - [x] one branch conflicts on replay; others still rebase
+  - [x] starting from a feature branch
+- [ ] Skipped: explicit version probe — git produces a clear "is not a git command" error itself if `replay` is missing
 
-## Phase 5 — Cleanup
-- [ ] Retire `checkout-main` subcommand and the `git main` alias (no longer earns its keep)
-- [ ] Cherry safety check should target `main`, not HEAD's upstream — currently only works when run from `main`. Fold into Phase 4 redesign or address standalone.
-- [ ] Bump `.tool-versions` to current Go + golangci-lint (still pins 1.19.3 / 1.50.1, out of sync with `go.mod` go 1.23 / toolchain 1.24.2)
-- [ ] Update README: drop `checkout-main`, note git 2.44+ requirement
-- [ ] Bump `cmd/version.json` on the next release
+## Phase 5 — Minimize
+With `git replay` doing the work, the Go scaffolding stopped earning its keep. Aggressively simplify and keep only what supports the test suite (the project's main remaining value).
 
-## Phase 6 — Future feature: configurable rebase target
-- [ ] `rebase-all --onto <ref>`, default `origin/main` (resolve remote-side main/master)
+- [x] Drop `cmd/` entirely — collapse into `package main` with stdlib `flag`
+- [x] Drop `urfave/cli` dependency
+- [x] Delete `checkout-main`, `install-git-aliases`, `version` subcommands and `version.json`
+- [x] Delete dead methods: `Git.Checkout`, `Git.AddAlias`, `Git.ExecSilent` (no callers)
+- [x] Move scenarios from `cmd/testdata/` to `testdata/`, drop the now-redundant `rebase-all.` prefix
+- [x] Drop `help`, `checkout-main.master`, `checkout-main.missing` scenarios (subjects gone)
+- [x] Update README + CLAUDE.md to reflect the single-binary shape
+- [ ] Bump `.tool-versions` to current Go + drop the golangci-lint pin if unused
+
+## Phase 6 — Future feature: configurable rebase target (deferred)
+The user is considering whether to keep the project at all. If kept and extended:
+- [ ] `--onto <ref>`, default `origin/main` (resolve remote-side main/master)
 - [ ] Auto-`git fetch <remote>` by default, with `--no-fetch` opt-out
-- [ ] Replace the cherry safety check (no longer meaningful when target is a remote-tracking ref) with "fetch succeeded"
+- [ ] Add a "fetch succeeded" precondition check (replaces the dropped cherry check)
 - [ ] Document the worktree workflow as the primary use case
 
 ---
@@ -77,6 +85,14 @@ One canonical `(*Git).Exec(args) (Output, error)` and one canonical package-leve
 ### Phase 3.5 — done
 Worst single offender (`scripts.Init` functional-options pattern + generic `apply` for a 2-field struct, only one option ever defined) deleted. `executer.go` inlined and the tempfile-then-exec dance replaced with `sh -c`. `git.go` is shorter, receiver is `g`, doc comments don't echo signatures, `StdoutLines` no longer ships `[""]` on empty input. `cmd/` footguns fixed (failure-then-success log on alias install, discarded errors, misleading `return err`). `TestWork`/`UpdateScripts` are env-gated so CI can't auto-update its way past failures. `go test ./...` and `go vet ./...` clean.
 
-### Phase 4 — not started
-### Phase 5 — not started
-### Phase 6 — not started (depends on Phase 4)
+### Phase 4 — done
+`Git.Replay(base, target)` runs `git replay --onto <base> <base>..<target>` and pipes the resulting `update refs/heads/...` lines to `git update-ref --stdin`. No checkout, no working-tree state, no per-branch defer dance. `cmd/rebase-all.go` is now a flat loop: list branches, skip main, replay each, log-and-continue on failure. Cherry check + `Git.Cherry` + `Git.Rebase` all deleted as dead code. Old `rebase-all.unpublished-main.txtar` scenario removed (it locked in the cherry semantics we just dropped). Three new scenarios prove the wins: worktree-attached branch still rebases, conflicting branch is reported and skipped while siblings succeed, running from a feature branch works without ceremony. `rebase-all.happy.txtar` simplified — no longer needs a bare origin since cherry's gone.
+
+Hard requirement: git ≥ 2.44 (when `replay` shipped). No explicit probe — git's own "'replay' is not a git command" error is clear enough.
+
+### Phase 5 — done (mostly)
+Down from 384 LOC / 9 Go files to **231 LOC / 3 Go files**. Scaffolding gone, behavior unchanged. `urfave/cli` dropped from `go.mod` along with its transitive deps. `main.go` is ~50 lines of plain stdlib + the rebase loop. Only `git/git.go` (124 lines, the `git` CLI wrapper + `Replay`) and `git/scripts/git.go` (55 lines, test fixtures) remain alongside it. All 9 testscript scenarios + 5 unit tests still green.
+
+Open: `.tool-versions` still pins golang 1.19.3 / golangci-lint 1.50.1 — neither is used now.
+
+### Phase 6 — deferred pending archive decision

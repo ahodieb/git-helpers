@@ -11,18 +11,28 @@ type Git struct {
 	WorkingDir string
 }
 
-// Rebase target on top of base. `git rebase <base> <target>` leaves
-// HEAD on <target>, so we restore the original branch on the way out.
-func (g *Git) Rebase(base, target string) error {
-	original, err := g.CurrentBranch()
+// Replay rebases target onto base by writing new refs only — no
+// checkout, no working-tree changes. Uses `git replay` (>= 2.44) and
+// pipes its output to `git update-ref --stdin`. Returns nil when the
+// branch is already up to date with base.
+func (g *Git) Replay(base, target string) error {
+	out, err := g.Exec("replay", "--onto", base, base+".."+target)
 	if err != nil {
 		return err
 	}
-	defer g.ExecSilent("checkout", original)
+	if out.TrimmedStdout() == "" {
+		return nil
+	}
 
-	if err := g.ExecSilent("rebase", base, target); err != nil {
-		g.ExecSilent("rebase", "--abort")
-		return err
+	cmd := exec.Command("git", "-C", g.WorkingDir, "update-ref", "--stdin")
+	cmd.Stdin = strings.NewReader(out.Stdout)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("update-ref: %s, %w", msg, err)
+		}
+		return fmt.Errorf("update-ref: %w", err)
 	}
 	return nil
 }
@@ -56,28 +66,6 @@ func (g *Git) ListBranches() ([]string, error) {
 		return nil, err
 	}
 	return out.StdoutLines(), nil
-}
-
-// Cherry returns the +/- prefixed lines from `git cherry -v`
-// (commits on HEAD vs its upstream). Empty = no unpublished commits.
-func (g *Git) Cherry() ([]string, error) {
-	out, err := g.Exec("cherry", "-v")
-	if err != nil {
-		return nil, err
-	}
-	return out.StdoutLines(), nil
-}
-
-// `git config --global alias.<alias> <command>`
-func (g *Git) AddAlias(alias, command string) error {
-	key := fmt.Sprintf("alias.%s", alias)
-	return g.ExecSilent("config", "--global", key, command)
-}
-
-// ExecSilent runs a git command and discards its output.
-func (g *Git) ExecSilent(arg ...string) error {
-	_, err := g.Exec(arg...)
-	return err
 }
 
 // Exec runs `git -C <WorkingDir> <args>...` and returns the captured Output.

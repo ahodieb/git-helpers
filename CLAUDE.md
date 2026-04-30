@@ -4,55 +4,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`git-helpers` is a small Go CLI that wraps the `git` command with a few personal helpers — most importantly `rebase-all`, which rebases every local branch on top of `main`/`master`. The CLI also installs git aliases (`git main`, `git rebase-all`) so the helpers feel like native git subcommands.
+A single-binary Go tool that rebases every local branch onto `main`/`master` using `git replay` (git ≥ 2.44). No subcommands, no checkout — just refs being rewritten via `git replay | git update-ref --stdin`. The whole program is ~50 lines in `main.go`.
 
-The README warns it can damage repository structure — `rebase-all` rewrites history on every local branch in one go, so be deliberate when changing its behavior.
+The README warns it rewrites local branch refs — that's the whole point, but be deliberate when changing the rebase loop.
 
 ## Common commands
 
 ```bash
-# build / install
-go install ./...
-
-# run without installing
-go run . rebase-all
-go run . -C /path/to/repo checkout-main
-
-# tests
+go build ./...
 go test ./...
-go test ./git -run TestFindMainBranch          # single test
-go test ./git -run TestScripts/git.ListBranches # single testscript file
+go test . -run TestScripts/happy        # one CLI scenario
+go test ./git -run TestFindMainBranch   # one unit test
 
-# lint (matches .tool-versions: golangci-lint 1.50.1)
-golangci-lint run
+# testscript dev flags (off by default, on in CI is wrong)
+TESTWORK=1 go test .                    # keep WorkDir for inspection
+UPDATE_SCRIPTS=1 go test .              # auto-update failing scripts
 ```
-
-Tool versions are pinned in `.tool-versions` (golang 1.19.3 / golangci-lint 1.50.1). `go.mod` declares `go 1.19`.
 
 ## Architecture
 
-Three layers, each in its own package:
+Three files matter:
 
-- **`main.go`** — wires up `urfave/cli/v2`. Each subcommand maps to a function in `cmd/`. The global `-C/--working-dir` flag is read by every command via `cmd.FlagWorkingDir`.
-- **`cmd/`** — one file per subcommand (`checkout_main.go`, `rebase-all.go`, `install-git-aliases.go`, `version.go`). Each builds a `git.Git{WorkingDir: ...}` and orchestrates calls. `version.go` embeds `cmd/version.json` (the source of truth for the version string read by the README badge) and reads VCS info from `runtime/debug.ReadBuildInfo` — so `go install` produces a version with the embedded string + the commit hash.
-- **`git/git.go`** — thin wrapper that shells out to the `git` binary via `os/exec`. The `Git` struct just holds `WorkingDir`. Higher-level methods (`FindMainBranch`, `Cherry`, `Rebase`, `ListBranches`, etc.) compose the lower-level `Exec`.
-
-`rebase-all` flow: find main → run `git cherry -v` to confirm main has no unpublished commits → list branches → for each non-main branch, `git rebase <main> <branch>`. After a rebase, HEAD lands on the rebased branch, so `Git.Rebase` saves the original branch up front and `defer`s a checkout back to it. On rebase failure it runs `git rebase --abort`.
-
-### Two parallel Exec implementations
-
-`git/git.go` currently has two execution paths that exist side by side:
-
-- `(*Git).Exec(arg...) (string, error)` — older, returns trimmed stdout as a string.
-- `(*Git).Exec2(arg...) (Output, error)` and the package-level `Exec(arg...) (Output, error)` — newer, return an `Output{Stdout, Stderr, ExitCode}` struct. This is what the testscript harness uses.
-
-The newer path (`Exec2` / package `Exec` / `Output`) is the direction the code is moving in — the most recent commits introduced it. New code should use it; treat the old `(*Git).Exec` as legacy.
+- **`main.go`** — `flag` parses `-C path`; `rebaseAll(g)` finds main, lists branches, calls `g.Replay(main, branch)` per non-main branch, logs failures and continues. That's the whole program.
+- **`git/git.go`** — wrapper around the `git` CLI. `(*Git).Exec` prepends `-C WorkingDir` and delegates to the package-level `Exec`, which is the only place that touches `os/exec`. `Replay` is the one non-trivial method: it runs `git replay --onto <base> <base>..<target>`, then pipes the stdout to `git update-ref --stdin` (the second call uses raw `exec.Command` because it needs `Stdin`). Errors are signalled by exit code only — git writes status to stderr on success ("Switched to branch 'foo'") so stderr alone isn't a failure signal. On failure the error message is enriched with stderr.
+- **`git/scripts/git.go`** — test fixture helpers: `Init`, `InitOnBranch`, `CreateBranch`, `Checkout`. Each runs a tiny `sh -c` script against a real `git` binary in `t.TempDir()`. Used by unit tests.
 
 ## Tests
 
-Two styles, both in the `git` package:
+Three styles:
 
-- **Standard Go tests** (`git_test.go`) using `testify/assert`. They build temp repos via the `git/scripts` helper package — `scripts.Init(t)` creates a real git repo in `t.TempDir()` by running a small shell script (`scripts/executer.go` writes the script to disk and execs `/bin/sh`).
-- **`testscript` tests** (`git_scripts_test.go`) using `rogpeppe/go-internal/testscript`. `TestMain` registers `git.Exec`, `git.CurrentBranch`, and `git.ListBranches` as in-process commands; the `.txt`/`.txtar` files under `git/testdata/scripts/` are the actual test scenarios. `UpdateScripts: true` is on, so a failing testscript can be auto-updated by re-running.
+- **Unit tests** (`git/git_test.go`) — testify/assert against real git repos created via `scripts.Init(t)`.
+- **CLI testscript scenarios** (`testdata/scripts/*.txtar`) — driven by `main_test.go`. The harness registers `git-helpers` as an in-process command and pre-creates `./repo` with one initial commit per scenario via a `Setup` hook (see the `initRepo` shell snippet). Scenarios cover: `happy` (basic flow), `feature-branch` (HEAD on a non-main branch — no longer needs main checked out), `worktree` (a branch attached to a worktree still gets rebased), `conflict` (one branch fails to replay; siblings still succeed).
+- **Low-level `git.Exec` testscript scenarios** (`git/testdata/scripts/*.txt`) — driven by `git/git_scripts_test.go`. The `TestMain` registers `git.Exec`, `git.CurrentBranch`, `git.ListBranches` so testscripts can call them directly. Scenarios lock down stderr-on-success and exit-code propagation.
 
-When adding a new helper to `git/git.go`, the convention is: write a unit test in `git_test.go` for the Go API, and (if the helper is exposed as a script command) add a `testdata/scripts/<name>.txt` exercising it end-to-end against a real git binary.
+`TestWork` and `UpdateScripts` are gated on env vars (`TESTWORK=1`, `UPDATE_SCRIPTS=1`) so CI fails on stale snapshots and dev can opt in when iterating.
+
+## Hard requirement
+
+Git ≥ 2.44 (when `git replay` shipped). No explicit version probe — git's own "'replay' is not a git command" error is clear enough if a user tries with an older binary.

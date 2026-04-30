@@ -1,0 +1,29 @@
+# Happy path: main advances after b1/b2 fork off; rebase-all replays
+# each branch's commit on top of the new main.
+
+cd repo
+
+exec git checkout -b b1
+exec git commit -q --allow-empty -m 'b1: B1'
+exec git checkout -b b2 main
+exec git commit -q --allow-empty -m 'b2: B2'
+
+exec git checkout main
+exec git commit -q --allow-empty -m 'main: M1'
+
+exec git-helpers -C .
+
+exec git log --format=%s b1
+cmp stdout ../expected-b1.log
+
+exec git log --format=%s b2
+cmp stdout ../expected-b2.log
+
+-- expected-b1.log --
+b1: B1
+main: M1
+initial commit
+-- expected-b2.log --
+b2: B2
+main: M1
+initial commit

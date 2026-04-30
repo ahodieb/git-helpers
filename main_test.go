@@ -1,24 +1,21 @@
-package cmd_test
+package main
 
 import (
 	"os"
 	"os/exec"
 	"testing"
 
-	"github.com/ahodieb/git-helpers/cmd"
 	"github.com/rogpeppe/go-internal/testscript"
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(testscript.RunMain(m, map[string]func() int{
-		"git-helpers": func() int {
-			return cmd.Run(os.Args)
-		},
+		"git-helpers": func() int { return run(os.Args) },
 	}))
 }
 
 // initRepo runs in each scenario's WorkDir before the script starts.
-// It creates ./repo with one initial commit on `main`, configured so
+// Creates ./repo with one initial commit on `main`, configured so
 // commits don't depend on a global git identity or signing key.
 const initRepo = `
 set -e

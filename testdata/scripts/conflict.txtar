@@ -1,0 +1,43 @@
+# When one branch conflicts on replay, rebase-all reports it and
+# continues with the rest. The conflicting branch is left untouched.
+
+cd repo
+
+# b1: writes foo.txt one way
+exec git checkout -b b1
+cp $WORK/b1-foo.txt foo.txt
+exec git add foo.txt
+exec git commit -q -m 'b1: write foo'
+
+# b2: empty commit, will not conflict
+exec git checkout -b b2 main
+exec git commit -q --allow-empty -m 'b2: empty'
+
+# main: writes foo.txt the other way (conflicts with b1)
+exec git checkout main
+cp $WORK/main-foo.txt foo.txt
+exec git add foo.txt
+exec git commit -q -m 'main: write foo'
+
+exec git-helpers -C .
+stderr 'failed to replay "b1"'
+
+# b2 was rebased onto main: write foo
+exec git log --format=%s b2
+cmp stdout ../expected-b2.log
+
+# b1 was NOT rebased — still rooted at initial commit
+exec git log --format=%s b1
+cmp stdout ../expected-b1.log
+
+-- b1-foo.txt --
+b1-content
+-- main-foo.txt --
+main-content
+-- expected-b1.log --
+b1: write foo
+initial commit
+-- expected-b2.log --
+b2: empty
+main: write foo
+initial commit

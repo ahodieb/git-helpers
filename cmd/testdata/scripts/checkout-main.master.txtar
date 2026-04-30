@@ -1,8 +1,0 @@
-# checkout-main resolves to `master` when that's the only candidate.
-cd repo
-exec git branch -m main master
-exec git checkout -b feature
-
-exec git-helpers -C . checkout-main
-exec git branch --show-current
-stdout '^master$'

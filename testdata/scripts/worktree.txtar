@@ -1,0 +1,26 @@
+# A branch checked out in a separate worktree still gets rebased.
+# Pre-Phase-4 this failed because the old `git rebase main b1` flow
+# tried to check b1 out in the current worktree and tripped over
+# "branch already checked out".
+
+cd repo
+
+exec git checkout -b b1
+exec git commit -q --allow-empty -m 'b1: B1'
+
+exec git checkout main
+exec git commit -q --allow-empty -m 'main: M1'
+
+# attach b1 to a worktree
+exec git worktree add ../wt-b1 b1
+
+exec git-helpers -C .
+
+# b1 was rebased onto main even though it's checked out in ../wt-b1
+exec git log --format=%s b1
+cmp stdout ../expected.log
+
+-- expected.log --
+b1: B1
+main: M1
+initial commit

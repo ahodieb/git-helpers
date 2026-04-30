@@ -1,46 +1,32 @@
 # git-helpers
 
-![](https://img.shields.io/badge/dynamic/json?label=version&style=for-the-badge&color=green&url=https%3A%2F%2Fraw.githubusercontent.com%2Fahodieb%2Fgit-helpers%2Fmain%2Fcmd%2Fversion.json&query=version)
-![](https://img.shields.io/badge/WARNING-can%20damage%20your%20repository%20structure-red?style=for-the-badge)
+![](https://img.shields.io/badge/WARNING-rewrites%20local%20branch%20refs-red?style=for-the-badge)
 
+Rebases every local branch onto `main` (or `master`) using `git replay` —
+no checkout, no working-tree changes. Branches checked out in another
+worktree are rebased without conflict; branches that can't replay
+cleanly are reported and skipped.
 
+Requires git ≥ 2.44 (when `git replay` shipped).
 
-Provides a collection of helper functionality that I used every day
-
-## Installation
+## Install
 
 ```bash
-# install cli
-go install github.com/ahodieb/git-helpers
+go install github.com/ahodieb/git-helpers@latest
 
-# setup git aliases for a quicker flow
-git-helpers install-git-aliases
+# optional: wire it up as `git rebase-all`
+git config --global alias.rebase-all '!git-helpers'
 ```
 
-## Helpers
-
-### `checkout-main`
-
-Checkout the main branch.
-Many projects have migrated from `master` to `main` as the main branch name, so this switch to whatever is the main
-branch in the current repository
+## Use
 
 ```bash
-git-helpers checkout-main
+# from anywhere inside a repo
+git-helpers
 
-# with git aliases setup
-git main
-```
-
-### `rebase-all`
-
-Rebase all the other branches on top of the `main` branch.
-When I work on multiple feature branches locally I like to rebase all of them onto main frequently.
-
-```bash
-git-helpers rebase-all
-
-# with git aliases setup
+# or with the alias
 git rebase-all
-```
 
+# from outside, point at a repo
+git-helpers -C /path/to/repo
+```
