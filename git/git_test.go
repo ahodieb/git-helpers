@@ -95,7 +95,7 @@ func TestFindMainBranch(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			r := scripts.Init(t, scripts.WithBranch(tt.branches[0]))
+			r := scripts.InitOnBranch(t, tt.branches[0])
 			r.CreateBranch(t, tt.branches[1:]...)
 			g := Git{WorkingDir: r.Dir}
 			got, err := g.FindMainBranch()

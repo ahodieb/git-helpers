@@ -14,18 +14,21 @@ import (
 var versionJson []byte
 
 func Version(cCtx *cli.Context) error {
+	var v struct {
+		Version string `json:"version"`
+	}
+	_ = json.Unmarshal(versionJson, &v)
+
 	var commit string
 	var timestamp time.Time
-	var versionMap map[string]string
-	_ = json.Unmarshal(versionJson, &versionMap)
-
-	info, _ := debug.ReadBuildInfo()
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			commit = kv.Value
-		case "vcs.time":
-			timestamp, _ = time.Parse("2006-01-02T15:04:05Z", kv.Value)
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, kv := range info.Settings {
+			switch kv.Key {
+			case "vcs.revision":
+				commit = kv.Value
+			case "vcs.time":
+				timestamp, _ = time.Parse("2006-01-02T15:04:05Z", kv.Value)
+			}
 		}
 	}
 
@@ -34,6 +37,6 @@ func Version(cCtx *cli.Context) error {
 		shortCommit = shortCommit[:10]
 	}
 
-	fmt.Printf("%s %s %s\n", versionMap["version"], shortCommit, timestamp.Format(time.DateTime))
+	fmt.Printf("%s %s %s\n", v.Version, shortCommit, timestamp.Format(time.DateTime))
 	return nil
 }

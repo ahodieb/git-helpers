@@ -19,7 +19,6 @@ func RebaseAll(cCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
 	if len(changes) != 0 {
 		log.Printf("%s branch has unpublished commits, aborting, %v", mainBranch, changes)
 		return nil
@@ -30,23 +29,13 @@ func RebaseAll(cCtx *cli.Context) error {
 		return err
 	}
 
-	branches = remove(mainBranch, branches)
-
 	for _, branch := range branches {
+		if branch == mainBranch {
+			continue
+		}
 		if err := g.Rebase(mainBranch, branch); err != nil {
-			log.Printf("failed to rebase branch %q", branch)
+			log.Printf("failed to rebase %q: %v", branch, err)
 		}
 	}
-
-	return err
-}
-
-func remove(value string, values []string) []string {
-	for i := range values {
-		if values[i] == value {
-			return append(values[:i], values[i+1:]...)
-		}
-	}
-
-	return values
+	return nil
 }

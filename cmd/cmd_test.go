@@ -33,8 +33,8 @@ git commit -q --allow-empty -m 'initial commit'
 func TestScripts(t *testing.T) {
 	testscript.Run(t, testscript.Params{
 		Dir:           "testdata/scripts",
-		TestWork:      true,
-		UpdateScripts: true,
+		TestWork:      os.Getenv("TESTWORK") == "1",
+		UpdateScripts: os.Getenv("UPDATE_SCRIPTS") == "1",
 		Setup: func(env *testscript.Env) error {
 			c := exec.Command("/bin/sh", "-c", initRepo)
 			c.Dir = env.WorkDir

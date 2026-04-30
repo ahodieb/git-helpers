@@ -13,5 +13,5 @@ func CheckoutMain(cCtx *cli.Context) error {
 		return err
 	}
 
-	return g.Checkout(mainBranch)
+	return g.ExecSilent("checkout", mainBranch)
 }

@@ -19,6 +19,20 @@
 - [x] All callers go through the `Output{Stdout, Stderr, ExitCode}` struct; string callers use `out.TrimmedStdout()`
 - [x] Error semantics in one place: exit code drives error, stderr is data, error message enriched with stderr at the package-level `Exec`
 
+## Phase 3.5 — Code-review cleanup
+- [x] Replace functional-options + generics in `git/scripts/git.go` with simple `Init` / `InitOnBranch`
+- [x] Inline `executer.go` into a `run` helper using `sh -c` (no tempfile, no Params struct); delete the file
+- [x] Rename receiver `git` → `g` throughout `git/git.go`
+- [x] Trim doc comments that echoed signatures; drop speculative future-work prose; drop the vague `--abort` TODO
+- [x] `Output.StdoutLines()` returns `nil` on empty stdout (was `[""]`); collapses `Cherry`'s manual filter
+- [x] Inline `Checkout` (one external caller); use `ExecSilent` for the discarded `--abort`
+- [x] `cmd/rebase-all.go`: include `err` in failure log, drop the `remove` helper for an inline `continue`, fix misleading `return err`
+- [x] `cmd/install-git-aliases.go`: don't log "installed" after a failure
+- [x] `cmd/version.go`: typed struct instead of `map[string]string`; nil-check `ReadBuildInfo`
+- [x] `cmd/run.go`: lowercase `App()` → `app()` (internal-only)
+- [x] Gate `TestWork` and `UpdateScripts` behind `TESTWORK=1` / `UPDATE_SCRIPTS=1` env vars in both testscript runners
+- [x] `git/git_scripts_test.go`: print only on success; delete commented-out `Cmds:` block
+
 ## Phase 4 — Rewrite `rebase-all` on `git replay`
 - [ ] Probe `git --version` ≥ 2.44 at startup; fail with clear message otherwise
 - [ ] New flow per branch: `git replay --onto <main> <merge-base>..<branch>` piped to `git update-ref --stdin` — never checks out anything
@@ -60,6 +74,9 @@ Surfaced — not fixed — while writing scenarios: `rebase-all` only works clea
 
 ### Phase 3 — done
 One canonical `(*Git).Exec(args) (Output, error)` and one canonical package-level `Exec`. The error-context behavior the deleted wrapper used to provide (enriching errors with stderr) was lifted into the package-level `Exec` so every caller benefits without paying for it. `Cherry` switched from string-splitting to `out.StdoutLines()` with whitespace filtering. Everything else (`Checkout`, `AddAlias`, `Rebase`) already went through `ExecSilent`, so no caller changes there.
+### Phase 3.5 — done
+Worst single offender (`scripts.Init` functional-options pattern + generic `apply` for a 2-field struct, only one option ever defined) deleted. `executer.go` inlined and the tempfile-then-exec dance replaced with `sh -c`. `git.go` is shorter, receiver is `g`, doc comments don't echo signatures, `StdoutLines` no longer ships `[""]` on empty input. `cmd/` footguns fixed (failure-then-success log on alias install, discarded errors, misleading `return err`). `TestWork`/`UpdateScripts` are env-gated so CI can't auto-update its way past failures. `go test ./...` and `go vet ./...` clean.
+
 ### Phase 4 — not started
 ### Phase 5 — not started
 ### Phase 6 — not started (depends on Phase 4)

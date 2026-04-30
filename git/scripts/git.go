@@ -1,7 +1,8 @@
 package scripts
 
 import (
-	"path"
+	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -9,68 +10,46 @@ type Repository struct {
 	Dir string
 }
 
-type InitOptions struct {
-	Name   string
-	Branch string
+// Init creates a real git repo in t.TempDir() with one initial commit on `main`.
+func Init(t *testing.T) Repository {
+	return InitOnBranch(t, "main")
 }
 
-func WithBranch(b string) func(opts *InitOptions) error {
-	return func(opts *InitOptions) error {
-		opts.Branch = b
-		return nil
-	}
-}
-
-func apply[T any](o *T, funcs ...func(*T) error) error {
-	for _, f := range funcs {
-		if err := f(o); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Init initialize a repository and return its path
-func Init(t *testing.T, optFunc ...func(*InitOptions) error) Repository {
+// InitOnBranch is Init with a custom default-branch name.
+func InitOnBranch(t *testing.T, branch string) Repository {
 	t.Helper()
-
-	opts := InitOptions{
-		Name:   "testing.repo",
-		Branch: "main",
-	}
-
-	if err := apply(&opts, optFunc...); err != nil {
-		t.Fatal(err)
-	}
-
-	dir := t.TempDir()
-	ExecScript(t, Params{
-		Dir: dir,
-		Env: []string{"name=" + opts.Name, "branch=" + opts.Branch},
-	}, `
-		git init -b "${branch}" "${name}"
-		cd "${name}"
-		git config user.email 'testing@go.local'
-		git config user.name 'git-helper tests'
+	dir := filepath.Join(t.TempDir(), "testing.repo")
+	run(t, "", `
+		git init -q -b "$1" "$2"
+		cd "$2"
+		git config user.email 'test@git-helpers.local'
+		git config user.name 'git-helpers tests'
 		git config commit.gpgsign false
-		git commit --allow-empty -m '🎉 initial commit'
-	`)
-
-	return Repository{Dir: path.Join(dir, "testing.repo")}
+		git commit -q --allow-empty -m 'initial commit'
+	`, branch, dir)
+	return Repository{Dir: dir}
 }
 
 func (r *Repository) CreateBranch(t *testing.T, branches ...string) {
 	t.Helper()
-	for _, branch := range branches {
-		ExecScript(t, Params{Dir: r.Dir, Env: []string{"branch=" + branch}}, `
-		git branch "${branch}"
-	`)
+	for _, b := range branches {
+		run(t, r.Dir, `git branch "$1"`, b)
 	}
 }
 
 func (r *Repository) Checkout(t *testing.T, branch string) {
 	t.Helper()
-	ExecScript(t, Params{Dir: r.Dir, Env: []string{"branch=" + branch}}, `
-		git checkout "${branch}"
-	`)
+	run(t, r.Dir, `git checkout "$1"`, branch)
+}
+
+// run executes script via /bin/sh -c with positional args ($1, $2, ...).
+// Calls t.Fatal on non-zero exit.
+func run(t *testing.T, dir, script string, args ...string) {
+	t.Helper()
+	c := exec.Command("/bin/sh", append([]string{"-c", script, "sh"}, args...)...)
+	c.Dir = dir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		t.Fatalf("script failed: %v\n%s", err, out)
+	}
 }

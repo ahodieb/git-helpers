@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func App() *cli.App {
+func app() *cli.App {
 	return &cli.App{
 		Name:  AppName,
 		Usage: "provides some additional functionality to git",
@@ -48,7 +48,7 @@ func App() *cli.App {
 // Used by main and by the testscript harness so the CLI can be invoked
 // in-process without calling os.Exit.
 func Run(args []string) int {
-	if err := App().Run(args); err != nil {
+	if err := app().Run(args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
