@@ -29,9 +29,17 @@ func run(args []string) int {
 }
 
 func rebaseAll(g git.Git, onto string) error {
-	base, err := resolveBase(g, onto)
-	if err != nil {
-		return err
+	base := onto
+	if base == "" {
+		for _, ref := range []string{"main", "master"} {
+			if _, err := g.Exec("rev-parse", "--verify", ref); err == nil {
+				base = ref
+				break
+			}
+		}
+		if base == "" {
+			return fmt.Errorf("no main or master found; pass --onto <ref>")
+		}
 	}
 
 	branches, err := g.ListBranches()
@@ -48,16 +56,4 @@ func rebaseAll(g git.Git, onto string) error {
 		}
 	}
 	return nil
-}
-
-func resolveBase(g git.Git, onto string) (string, error) {
-	if onto != "" {
-		return onto, nil
-	}
-	for _, ref := range []string{"main", "master"} {
-		if _, err := g.Exec("rev-parse", "--verify", ref); err == nil {
-			return ref, nil
-		}
-	}
-	return "", fmt.Errorf("no main or master found; pass --onto <ref>")
 }

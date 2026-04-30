@@ -38,3 +38,10 @@ Added `--onto <ref>`. When unset, falls back to local `main` or `master`. No aut
 Sometimes the rebase target should be something other than `main` (typically `origin/main` after a manual fetch). The user does their own fetching — keeps the tool predictable, no surprise side effects from a `--no-fetch` toggle.
 
 Final size: **165 LOC across 2 source files**, plus 55 lines of test fixtures. 12 tests green (5 CLI scenarios, 4 low-level scenarios, 3 unit tests).
+
+## Phase 7 — Second simplification pass
+Collapsed `Output{Stdout, Stderr, ExitCode}` plus `TrimmedStdout()` and `StdoutLines()` methods into a plain `(string, error)` return on `Exec`. Folded the package-level `Exec` into the method; added a private `run(stdin, args...)` helper shared between `Exec` and the `update-ref` pipe in `Replay`. Inlined `resolveBase` into `rebaseAll`. Inlined the `git/scripts/` test fixture package as a `setupRepo` helper directly in `git_test.go`. Deleted the low-level `git/git_scripts_test.go` runner and its `testdata/scripts/` (3 of its 4 scenarios duplicated unit-test coverage; the 4th — exit-code propagation — became irrelevant once `Exec` returns just `(string, error)`, replaced by one new unit test asserting non-zero exit returns an error).
+
+Reviewing the project as a glorified bash script — a loop over branches calling `git replay`. Anything beyond that loop and the test suite was dead weight. The `Output` struct existed to be `Output`; the package-level `Exec` existed because old testscripts had registered it as an in-process command; the `scripts/` subpackage existed because the helpers had been there before they were trimmed.
+
+Final size: **124 LOC of production code across 2 source files** (main.go 59, git/git.go 65), plus 121 lines of tests across 2 files. 9 tests green (5 CLI scenarios, 4 unit tests). One Watch-dropped detail caught and fixed mid-pass: trimming Exec output broke `update-ref --stdin`, which is line-terminated — `Exec` now trims at the public boundary while the private `run` returns raw stdout for the pipe path.
