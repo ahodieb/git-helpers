@@ -16,21 +16,20 @@ func main() {
 func run(args []string) int {
 	fs := flag.NewFlagSet("git-helpers", flag.ContinueOnError)
 	dir := fs.String("C", ".", "working directory")
+	onto := fs.String("onto", "", "ref to rebase onto; when unset, falls back to local main or master")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
 
-	if err := rebaseAll(git.Git{WorkingDir: *dir}); err != nil {
+	if err := rebaseAll(git.Git{WorkingDir: *dir}, *onto); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 	return 0
 }
 
-// rebaseAll replays every local branch (other than main/master) onto
-// main using `git replay`. Branches that conflict are reported and skipped.
-func rebaseAll(g git.Git) error {
-	base, err := g.FindMainBranch()
+func rebaseAll(g git.Git, onto string) error {
+	base, err := resolveBase(g, onto)
 	if err != nil {
 		return err
 	}
@@ -49,4 +48,16 @@ func rebaseAll(g git.Git) error {
 		}
 	}
 	return nil
+}
+
+func resolveBase(g git.Git, onto string) (string, error) {
+	if onto != "" {
+		return onto, nil
+	}
+	for _, ref := range []string{"main", "master"} {
+		if _, err := g.Exec("rev-parse", "--verify", ref); err == nil {
+			return ref, nil
+		}
+	}
+	return "", fmt.Errorf("no main or master found; pass --onto <ref>")
 }

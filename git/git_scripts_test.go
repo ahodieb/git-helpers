@@ -18,16 +18,6 @@ func TestMain(m *testing.M) {
 			fmt.Fprint(os.Stderr, out.Stderr)
 			return out.ExitCode
 		},
-		"git.CurrentBranch": func() int {
-			g := Git{WorkingDir: "."}
-			branch, err := g.CurrentBranch()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				return exitCode(err)
-			}
-			fmt.Println(branch)
-			return 0
-		},
 		"git.ListBranches": func() int {
 			g := Git{WorkingDir: "."}
 			branches, err := g.ListBranches()

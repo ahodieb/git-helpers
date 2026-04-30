@@ -37,28 +37,6 @@ func (g *Git) Replay(base, target string) error {
 	return nil
 }
 
-func (g *Git) FindMainBranch() (string, error) {
-	branches, err := g.ListBranches()
-	if err != nil {
-		return "", err
-	}
-	for _, b := range branches {
-		if b == "main" || b == "master" {
-			return b, nil
-		}
-	}
-	return "", fmt.Errorf("did not find `main` or `master` branch, found: %v", branches)
-}
-
-// `git branch --show-current`
-func (g *Git) CurrentBranch() (string, error) {
-	out, err := g.Exec("branch", "--show-current")
-	if err != nil {
-		return "", err
-	}
-	return out.TrimmedStdout(), nil
-}
-
 // `git branch --format=%(refname:short)`
 func (g *Git) ListBranches() ([]string, error) {
 	out, err := g.Exec("branch", `--format=%(refname:short)`)

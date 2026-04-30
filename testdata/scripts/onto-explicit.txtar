@@ -1,0 +1,22 @@
+# --onto takes any ref and uses it as-is. No fetching, no remote
+# detection — the user is in charge of having that ref at the right SHA.
+
+cd repo
+
+# create a custom base ref
+exec git checkout -b release
+exec git commit -q --allow-empty -m 'release: R1'
+exec git checkout main
+
+exec git checkout -b b1
+exec git commit -q --allow-empty -m 'b1: B1'
+
+exec git-helpers --onto release -C .
+
+exec git log --format=%s b1
+cmp stdout ../expected.log
+
+-- expected.log --
+b1: B1
+release: R1
+initial commit

@@ -21,7 +21,7 @@ git config --global alias.rebase-all '!git-helpers'
 ## Use
 
 ```bash
-# from anywhere inside a repo
+# from anywhere inside a repo — rebases onto local main (or master)
 git-helpers
 
 # or with the alias
@@ -29,4 +29,8 @@ git rebase-all
 
 # from outside, point at a repo
 git-helpers -C /path/to/repo
+
+# rebase onto a specific ref instead of main
+git fetch && git-helpers --onto origin/main
+git-helpers --onto release/v1
 ```
