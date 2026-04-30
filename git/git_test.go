@@ -32,7 +32,7 @@ func TestExecRespectsWorkingDir(t *testing.T) {
 
 	expected, err := filepath.EvalSymlinks(r.Dir)
 	assert.NoError(t, err)
-	got, err := filepath.EvalSymlinks(out)
+	got, err := filepath.EvalSymlinks(out.TrimmedStdout())
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
 }

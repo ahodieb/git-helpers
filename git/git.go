@@ -55,7 +55,7 @@ func (git *Git) FindMainBranch() (string, error) {
 // CurrentBranch returns the name of the current checked out branch
 // `git branch --show-current`
 func (git *Git) CurrentBranch() (string, error) {
-	out, err := git.Exec2("branch", "--show-current")
+	out, err := git.Exec("branch", "--show-current")
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func (git *Git) CurrentBranch() (string, error) {
 // ListBranches returns the names of local branches
 // `git branch --format=%(refname:short)`
 func (git *Git) ListBranches() ([]string, error) {
-	out, err := git.Exec2("branch", `--format=%(refname:short)`)
+	out, err := git.Exec("branch", `--format=%(refname:short)`)
 	if err != nil {
 		return nil, err
 	}
@@ -74,22 +74,18 @@ func (git *Git) ListBranches() ([]string, error) {
 	return out.StdoutLines(), nil
 }
 
-func (o *Output) StdoutLines() []string {
-	return strings.Split(o.TrimmedStdout(), "\n")
-}
-
 // Cherry returns the diff from branch and upstream
 // `git cherry -v`
 func (git *Git) Cherry() ([]string, error) {
-	stdout, err := git.Exec("cherry", "-v")
+	out, err := git.Exec("cherry", "-v")
 	if err != nil {
 		return nil, err
 	}
 
 	var changes []string
-	for _, change := range strings.Split(stdout, "\n") {
-		if strings.TrimSpace(change) != "" {
-			changes = append(changes, change)
+	for _, line := range out.StdoutLines() {
+		if line = strings.TrimSpace(line); line != "" {
+			changes = append(changes, line)
 		}
 	}
 	return changes, nil
@@ -108,34 +104,18 @@ func (git *Git) AddAlias(alias, command string) error {
 	return git.ExecSilent("config", "--global", alias, command)
 }
 
-// ExecSilent runs a git command with the passed args and ignores the output
+// ExecSilent runs a git command with the passed args and discards the output.
 func (git *Git) ExecSilent(arg ...string) error {
 	_, err := git.Exec(arg...)
 	return err
 }
 
-func (git *Git) Exec2(arg ...string) (Output, error) {
+// Exec runs `git -C <WorkingDir> <args>...` and returns the captured Output.
+// The error is non-nil iff git exited non-zero; on failure the message is
+// enriched with stderr for context.
+func (git *Git) Exec(arg ...string) (Output, error) {
 	arg = append([]string{"-C", git.WorkingDir}, arg...)
 	return Exec(arg...)
-}
-
-// Exec runs a git command with the passed args and returns trimmed stdout.
-// Errors are signalled by exit code only — git writes status messages to
-// stderr on success ("Switched to branch...", progress), so stderr alone
-// is not treated as failure.
-func (git *Git) Exec(arg ...string) (string, error) {
-	out, err := git.Exec2(arg...)
-	if err != nil {
-		if out.Stderr != "" {
-			return "", fmt.Errorf("%s, %w", out.Stderr, err)
-		}
-		if out.Stdout != "" {
-			return "", fmt.Errorf("%s, %w", out.Stdout, err)
-		}
-		return "", err
-	}
-
-	return out.TrimmedStdout(), nil
 }
 
 type Output struct {
@@ -148,9 +128,15 @@ func (o *Output) TrimmedStdout() string {
 	return strings.TrimSpace(o.Stdout)
 }
 
-// Exec executes a git command within a working directory wd
-// It returns both stdout, and stderr along with an error type
-// Note that git sometimes uses stderr even though process exits with 0
+func (o *Output) StdoutLines() []string {
+	return strings.Split(o.TrimmedStdout(), "\n")
+}
+
+// Exec runs the git binary with the given args and captures its output.
+// Errors are signalled by exit code only — git writes status messages to
+// stderr on success ("Switched to branch...", progress), so stderr alone
+// does not make a successful command an error. On failure the error
+// message includes any stderr captured.
 func Exec(arg ...string) (Output, error) {
 	var stdout strings.Builder
 	var stderr strings.Builder
@@ -159,19 +145,25 @@ func Exec(arg ...string) (Output, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	runErr := cmd.Run()
 	out := Output{
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),
 	}
 
-	if err != nil {
-		var exErr *exec.ExitError
-		if errors.As(err, &exErr) {
-			out.ExitCode = exErr.ExitCode()
-		} else {
-			out.ExitCode = 1
-		}
+	if runErr == nil {
+		return out, nil
 	}
-	return out, err
+
+	var exErr *exec.ExitError
+	if errors.As(runErr, &exErr) {
+		out.ExitCode = exErr.ExitCode()
+	} else {
+		out.ExitCode = 1
+	}
+
+	if msg := strings.TrimSpace(out.Stderr); msg != "" {
+		return out, fmt.Errorf("%s, %w", msg, runErr)
+	}
+	return out, runErr
 }

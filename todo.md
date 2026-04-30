@@ -15,9 +15,9 @@
 - [x] Low-level Exec scenarios: stderr-on-success, exit-code propagation
 
 ## Phase 3 — Consolidate to one `Exec`
-- [ ] Delete `(*Git).Exec` (or keep it as a thin sugar over `Exec2`); rename `Exec2` → `Exec`
-- [ ] All callers go through the `Output{Stdout, Stderr, ExitCode}` struct; string callers use `out.TrimmedStdout()`
-- [ ] Error semantics in one place: exit code drives error, stderr is data
+- [x] Delete the string-returning `(*Git).Exec`; rename `Exec2` → `Exec`
+- [x] All callers go through the `Output{Stdout, Stderr, ExitCode}` struct; string callers use `out.TrimmedStdout()`
+- [x] Error semantics in one place: exit code drives error, stderr is data, error message enriched with stderr at the package-level `Exec`
 
 ## Phase 4 — Rewrite `rebase-all` on `git replay`
 - [ ] Probe `git --version` ≥ 2.44 at startup; fail with clear message otherwise
@@ -58,7 +58,8 @@ Suite is `go test ./...`. Three layers:
 
 Surfaced — not fixed — while writing scenarios: `rebase-all` only works cleanly when started from `main` because `Cherry()` runs `git cherry -v` against HEAD's upstream rather than main's. Captured in Phase 5.
 
-### Phase 3 — not started
+### Phase 3 — done
+One canonical `(*Git).Exec(args) (Output, error)` and one canonical package-level `Exec`. The error-context behavior the deleted wrapper used to provide (enriching errors with stderr) was lifted into the package-level `Exec` so every caller benefits without paying for it. `Cherry` switched from string-splitting to `out.StdoutLines()` with whitespace filtering. Everything else (`Checkout`, `AddAlias`, `Rebase`) already went through `ExecSilent`, so no caller changes there.
 ### Phase 4 — not started
 ### Phase 5 — not started
 ### Phase 6 — not started (depends on Phase 4)
